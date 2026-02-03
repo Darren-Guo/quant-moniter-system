@@ -1,5 +1,6 @@
 """
 数据获取模块 - 从不同数据源获取市场数据
+支持真实数据和模拟数据
 """
 
 import asyncio
@@ -9,8 +10,10 @@ import yfinance as yf
 import pandas as pd
 import ccxt
 from datetime import datetime, timedelta
+import random
 
 from config.settings import DATA_SOURCES, MONITOR_SYMBOLS
+from .data_simulator import simulator
 
 logger = logging.getLogger(__name__)
 
@@ -18,16 +21,17 @@ logger = logging.getLogger(__name__)
 class DataFetcher:
     """数据获取器"""
     
-    def __init__(self):
+    def __init__(self, use_simulator: bool = True):
         self.yfinance_enabled = DATA_SOURCES["yfinance"]["enabled"]
         self.ccxt_enabled = DATA_SOURCES["ccxt"]["enabled"]
         self.ccxt_exchanges = {}
+        self.use_simulator = use_simulator
         
     async def initialize(self):
         """初始化数据源"""
         logger.info("初始化数据获取器...")
         
-        if self.ccxt_enabled:
+        if self.ccxt_enabled and not self.use_simulator:
             await self._initialize_ccxt()
             
         logger.info("✅ 数据获取器初始化完成")
@@ -48,7 +52,7 @@ class DataFetcher:
     
     async def fetch_stock_data(self, symbol: str, interval: str = "1m") -> Optional[pd.DataFrame]:
         """获取股票数据"""
-        if not self.yfinance_enabled:
+        if not self.yfinance_enabled or self.use_simulator:
             return None
             
         try:
@@ -81,7 +85,7 @@ class DataFetcher:
     async def fetch_crypto_data(self, symbol: str, exchange_name: str = "binance", 
                                timeframe: str = "1m") -> Optional[pd.DataFrame]:
         """获取加密货币数据"""
-        if not self.ccxt_enabled or exchange_name not in self.ccxt_exchanges:
+        if not self.ccxt_enabled or exchange_name not in self.ccxt_exchanges or self.use_simulator:
             return None
             
         try:
@@ -177,6 +181,57 @@ class DataFetcher:
         
         logger.info(f"📊 获取到 {len(all_data)} 个标的的数据")
         return all_data
+    
+    async def fetch_stock_data_for_web(self, symbol: str) -> Optional[Dict[str, Any]]:
+        """为Web应用获取股票数据（返回字典格式）"""
+        if self.use_simulator:
+            # 使用模拟数据
+            return await simulator.fetch_stock_data(symbol)
+        else:
+            # 使用真实数据
+            try:
+                ticker = yf.Ticker(symbol)
+                
+                # 获取基本信息
+                info = ticker.info
+                
+                # 获取最新价格
+                history = ticker.history(period="1d", interval="1m")
+                if history.empty:
+                    return None
+                
+                latest = history.iloc[-1]
+                
+                # 计算涨跌幅
+                if len(history) > 1:
+                    prev_close = history.iloc[-2]['close']
+                    change = latest['close'] - prev_close
+                    change_percent = (change / prev_close) * 100
+                else:
+                    change = 0
+                    change_percent = 0
+                
+                return {
+                    "symbol": symbol,
+                    "name": info.get('longName', symbol),
+                    "price": round(latest['close'], 2),
+                    "change": round(change, 2),
+                    "changePercent": round(change_percent, 2),
+                    "high": round(latest['high'], 2),
+                    "low": round(latest['low'], 2),
+                    "open": round(latest['open'], 2),
+                    "volume": int(latest['volume']),
+                    "marketCap": info.get('marketCap', 0),
+                    "sector": info.get('sector', ''),
+                    "timestamp": datetime.now().isoformat(),
+                    "exchange": "HK" if ".HK" in symbol else "US",
+                    "currency": "HKD" if ".HK" in symbol else "USD"
+                }
+                
+            except Exception as e:
+                logger.error(f"获取股票数据失败 {symbol}: {e}")
+                # 失败时回退到模拟数据
+                return await simulator.fetch_stock_data(symbol)
     
     async def cleanup(self):
         """清理资源"""

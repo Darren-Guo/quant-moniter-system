@@ -91,6 +91,23 @@ API_CONFIG = {
     "cors_origins": ["http://localhost:3000"]
 }
 
+# Web应用配置
+WEB_CONFIG = {
+    "host": "0.0.0.0",
+    "port": 8080,
+    "debug": True,
+    "static_path": "static",
+    "templates_path": "templates"
+}
+
+# 监控配置
+MONITOR_CONFIG = {
+    "update_interval": 10,  # 数据更新间隔（秒）
+    "max_stocks": 20,       # 最大监控股票数量
+    "data_retention_days": 7,  # 数据保留天数
+    "cache_ttl": 300        # 缓存过期时间（秒）
+}
+
 # 日志配置
 LOG_CONFIG = {
     "level": "INFO",

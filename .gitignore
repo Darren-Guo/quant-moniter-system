@@ -47,6 +47,7 @@ Thumbs.db
 
 # Project specific
 .env
+.github_token
 data/
 logs/
 *.db
