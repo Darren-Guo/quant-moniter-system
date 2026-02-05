@@ -22,8 +22,9 @@ share/python-wheels/
 *.egg
 MANIFEST
 
-# Virtual Environment
+# Virtual Environments
 venv/
+venv2/
 env/
 ENV/
 env.bak/
@@ -45,27 +46,25 @@ venv.bak/
 ehthumbs.db
 Thumbs.db
 
-# Project specific
-.env
-.github_token
-data/
+# Logs
 logs/
+*.log
+
+# Data
+data/
 *.db
 *.sqlite
-*.sqlite3
 
-# Test coverage
-.coverage
-htmlcov/
-.pytest_cache/
+# Config
+.env
+*.env
+config/secrets.json
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Backups
+*.backup
+*_backup
+app.js.backup
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
+# Test files
+test_client.py
+test_data.html
