@@ -22,6 +22,7 @@ import socketio
 from config.settings import WEB_CONFIG, MONITOR_CONFIG
 from src.data_fetcher import DataFetcher
 from src.monitor import QuantMonitor
+from src.strategies.web_integration import get_strategy_web_integration, initialize_strategy_web_integration
 
 # 配置日志
 logging.basicConfig(
@@ -53,6 +54,9 @@ class QuantWebApp:
             "last_update": None
         }
         
+        # 初始化策略集成
+        self.strategy_integration = get_strategy_web_integration()
+        
         # 设置路由
         self.setup_routes()
         self.setup_socketio()
@@ -69,6 +73,20 @@ class QuantWebApp:
         self.app.router.add_get('/api/refresh-stats', self.handle_refresh_stats)
         self.app.router.add_post('/api/start-monitoring', self.handle_start_monitoring)
         self.app.router.add_post('/api/stop-monitoring', self.handle_stop_monitoring)
+        
+        # 策略管理API
+        self.app.router.add_get('/api/strategies/dashboard', self.handle_strategies_dashboard)
+        self.app.router.add_get('/api/strategies/info', self.handle_strategies_info)
+        self.app.router.add_get('/api/strategies/performance', self.handle_strategies_performance)
+        self.app.router.add_get('/api/strategies/signals', self.handle_strategies_signals)
+        self.app.router.add_get('/api/strategies/types', self.handle_strategies_types)
+        self.app.router.add_post('/api/strategies/start', self.handle_strategies_start)
+        self.app.router.add_post('/api/strategies/stop', self.handle_strategies_stop)
+        self.app.router.add_post('/api/strategies/add', self.handle_strategies_add)
+        self.app.router.add_post('/api/strategies/remove', self.handle_strategies_remove)
+        self.app.router.add_post('/api/strategies/update-config', self.handle_strategies_update_config)
+        self.app.router.add_post('/api/strategies/set-weight', self.handle_strategies_set_weight)
+        self.app.router.add_post('/api/strategies/set-capital', self.handle_strategies_set_capital)
         
         # 静态文件服务
         self.app.router.add_static('/static/', Path(__file__).parent / 'static')
@@ -221,6 +239,202 @@ class QuantWebApp:
             "message": "监控已停止"
         })
     
+    # ==================== 策略管理API ====================
+    
+    async def handle_strategies_dashboard(self, request):
+        """获取策略仪表板数据"""
+        try:
+            dashboard_data = self.strategy_integration.get_dashboard_data()
+            return web.json_response(dashboard_data)
+        except Exception as e:
+            logger.error(f"获取策略仪表板数据失败: {e}")
+            return web.json_response({
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_info(self, request):
+        """获取策略信息"""
+        try:
+            strategy_info = await self.strategy_integration.get_strategy_info()
+            return web.json_response(strategy_info)
+        except Exception as e:
+            logger.error(f"获取策略信息失败: {e}")
+            return web.json_response({
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_performance(self, request):
+        """获取策略绩效报告"""
+        try:
+            performance_report = await self.strategy_integration.get_performance_report()
+            return web.json_response(performance_report)
+        except Exception as e:
+            logger.error(f"获取策略绩效报告失败: {e}")
+            return web.json_response({
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_signals(self, request):
+        """获取策略信号"""
+        try:
+            signals = await self.strategy_integration.analyze_signals()
+            return web.json_response(signals)
+        except Exception as e:
+            logger.error(f"获取策略信号失败: {e}")
+            return web.json_response({
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_types(self, request):
+        """获取可用策略类型"""
+        try:
+            strategy_types = self.strategy_integration.get_available_strategy_types()
+            return web.json_response(strategy_types)
+        except Exception as e:
+            logger.error(f"获取策略类型失败: {e}")
+            return web.json_response({
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_start(self, request):
+        """启动所有策略"""
+        try:
+            await self.strategy_integration.start_strategies()
+            return web.json_response({
+                "success": True,
+                "message": "所有策略已启动"
+            })
+        except Exception as e:
+            logger.error(f"启动策略失败: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_stop(self, request):
+        """停止所有策略"""
+        try:
+            await self.strategy_integration.stop_strategies()
+            return web.json_response({
+                "success": True,
+                "message": "所有策略已停止"
+            })
+        except Exception as e:
+            logger.error(f"停止策略失败: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_add(self, request):
+        """添加策略"""
+        try:
+            data = await request.json()
+            strategy_type = data.get('type')
+            name = data.get('name')
+            config = data.get('config', {})
+            
+            if not strategy_type or not name:
+                return web.json_response({
+                    "success": False,
+                    "error": "缺少必要参数: type 和 name"
+                }, status=400)
+            
+            result = await self.strategy_integration.add_strategy(strategy_type, name, config)
+            return web.json_response(result)
+        except Exception as e:
+            logger.error(f"添加策略失败: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_remove(self, request):
+        """移除策略"""
+        try:
+            data = await request.json()
+            strategy_name = data.get('name')
+            
+            if not strategy_name:
+                return web.json_response({
+                    "success": False,
+                    "error": "缺少必要参数: name"
+                }, status=400)
+            
+            result = await self.strategy_integration.remove_strategy(strategy_name)
+            return web.json_response(result)
+        except Exception as e:
+            logger.error(f"移除策略失败: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_update_config(self, request):
+        """更新策略配置"""
+        try:
+            data = await request.json()
+            strategy_name = data.get('name')
+            new_config = data.get('config', {})
+            
+            if not strategy_name:
+                return web.json_response({
+                    "success": False,
+                    "error": "缺少必要参数: name"
+                }, status=400)
+            
+            result = await self.strategy_integration.update_strategy_config(strategy_name, new_config)
+            return web.json_response(result)
+        except Exception as e:
+            logger.error(f"更新策略配置失败: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_set_weight(self, request):
+        """设置策略权重"""
+        try:
+            data = await request.json()
+            strategy_name = data.get('name')
+            weight = data.get('weight')
+            
+            if not strategy_name or weight is None:
+                return web.json_response({
+                    "success": False,
+                    "error": "缺少必要参数: name 和 weight"
+                }, status=400)
+            
+            result = await self.strategy_integration.set_strategy_weight(strategy_name, weight)
+            return web.json_response(result)
+        except Exception as e:
+            logger.error(f"设置策略权重失败: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    
+    async def handle_strategies_set_capital(self, request):
+        """设置总资金"""
+        try:
+            data = await request.json()
+            capital = data.get('capital')
+            
+            if capital is None:
+                return web.json_response({
+                    "success": False,
+                    "error": "缺少必要参数: capital"
+                }, status=400)
+            
+            result = await self.strategy_integration.set_total_capital(capital)
+            return web.json_response(result)
+        except Exception as e:
+            logger.error(f"设置总资金失败: {e}")
+            return web.json_response({
+                "success": False,
+                "error": str(e)
+            }, status=500)
+    
     async def monitoring_task(self, symbols: List[str]):
         """后台监控任务"""
         logger.info(f"开始监控任务，监控 {len(symbols)} 只股票")
@@ -265,6 +479,14 @@ class QuantWebApp:
                     'alerts_count': len(alerts),
                     'last_update': self.market_data["last_update"]
                 })
+                
+                # 更新策略市场数据
+                try:
+                    await self.strategy_integration.update_market_data({
+                        'stocks': stock_data
+                    })
+                except Exception as e:
+                    logger.error(f"更新策略市场数据失败: {e}")
                 
                 # 等待下一次更新
                 await asyncio.sleep(MONITOR_CONFIG.get("update_interval", 10))
