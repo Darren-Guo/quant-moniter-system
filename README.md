@@ -159,6 +159,15 @@ tail -f logs/monitor.log
 
 MIT License
 
+## 📋 项目文档
+
+- [文档索引.md](文档索引.md) - 所有文档的快速导航索引
+- [项目分析总结.md](项目分析总结.md) - 完整的项目功能分析和开发路线图
+- [前端开发任务.md](前端开发任务.md) - 前端开发状态和优化计划
+- [API_RESEARCH.md](API_RESEARCH.md) - API数据源调研报告
+- [REFRESH_OPTIMIZATION.md](REFRESH_OPTIMIZATION.md) - 刷新频率优化建议
+- [部署完成.md](部署完成.md) - 部署指南和访问信息
+
 ## 🤝 贡献
 
 欢迎提交Issue和Pull Request！
