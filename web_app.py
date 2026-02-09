@@ -56,7 +56,8 @@ class QuantWebApp:
         # 设置路由
         self.setup_routes()
         self.setup_socketio()
-        self.setup_cors()
+        # 暂时注释掉CORS设置，避免与Socket.IO冲突
+        # self.setup_cors()
         
     def setup_routes(self):
         """设置HTTP路由"""
@@ -65,6 +66,7 @@ class QuantWebApp:
         self.app.router.add_get('/api/market-data', self.handle_market_data)
         self.app.router.get('/api/stocks/{symbol}', self.handle_stock_data)
         self.app.router.add_get('/api/alerts', self.handle_alerts)
+        self.app.router.add_get('/api/refresh-stats', self.handle_refresh_stats)
         self.app.router.add_post('/api/start-monitoring', self.handle_start_monitoring)
         self.app.router.add_post('/api/stop-monitoring', self.handle_stop_monitoring)
         
@@ -153,6 +155,17 @@ class QuantWebApp:
             "count": len(self.market_data["alerts"])
         })
     
+    async def handle_refresh_stats(self, request):
+        """获取智能刷新统计信息"""
+        if hasattr(self.monitor, 'get_smart_refresh_stats'):
+            stats = self.monitor.get_smart_refresh_stats()
+            return web.json_response(stats)
+        else:
+            return web.json_response({
+                "error": "Smart refresh not available",
+                "message": "智能刷新功能未启用"
+            }, status=501)
+    
     async def handle_start_monitoring(self, request):
         """启动监控"""
         if self.is_running:
@@ -218,7 +231,7 @@ class QuantWebApp:
                 stock_data = {}
                 for symbol in symbols:
                     try:
-                        data = await self.data_fetcher.fetch_stock_data(symbol)
+                        data = await self.data_fetcher.fetch_stock_data_for_web(symbol)
                         if data:
                             stock_data[symbol] = data
                             

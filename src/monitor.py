@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from config.settings import MONITOR_INTERVALS, MONITOR_SYMBOLS, ALERT_CONFIG
 from src.data_fetcher import DataFetcher
 from src.alert_manager import AlertManager
+from src.smart_refresh import SmartRefreshManager
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,7 @@ class QuantMonitor:
     def __init__(self):
         self.data_fetcher = DataFetcher()
         self.alert_manager = AlertManager()
+        self.smart_refresh = SmartRefreshManager()
         self.is_monitoring = False
         self.monitor_tasks = []
         self.market_data = {}
@@ -33,6 +35,7 @@ class QuantMonitor:
         # 初始化组件
         await self.data_fetcher.initialize()
         await self.alert_manager.initialize()
+        await self.smart_refresh.initialize()
         
         self.is_monitoring = True
         
@@ -41,7 +44,8 @@ class QuantMonitor:
             asyncio.create_task(self._monitor_realtime()),
             asyncio.create_task(self._monitor_minute()),
             asyncio.create_task(self._monitor_hourly()),
-            asyncio.create_task(self._monitor_daily())
+            asyncio.create_task(self._monitor_daily()),
+            asyncio.create_task(self._monitor_system_resources())
         ]
         
         logger.info("✅ 量化监控已启动")
@@ -67,19 +71,28 @@ class QuantMonitor:
         logger.info("✅ 量化监控已停止")
     
     async def _monitor_realtime(self):
-        """实时监控（5秒间隔）"""
-        logger.info("启动实时监控（5秒间隔）...")
+        """实时监控（智能间隔）"""
+        logger.info("启动实时监控（智能间隔）...")
         
         while self.is_monitoring:
             try:
-                # 获取所有标的的实时数据
-                all_data = await self.data_fetcher.get_all_symbols_data("1m")
+                # 使用智能刷新获取数据
+                all_data = {}
+                for symbol in MONITOR_SYMBOLS["stocks"][:5]:  # 先监控前5个标的
+                    data = await self.smart_refresh.adaptive_refresh(
+                        symbol=symbol,
+                        interval_type="realtime",
+                        fetch_func=self.data_fetcher.fetch_stock_data,
+                        interval="1m"
+                    )
+                    if data:
+                        all_data[symbol] = data
                 
                 # 分析数据并触发告警
                 await self._analyze_and_alert(all_data, "realtime")
                 
                 # 更新市场数据
-                self.market_data = all_data
+                self.market_data.update(all_data)
                 
                 # 记录更新时间
                 self.last_update_time["realtime"] = datetime.now()
@@ -89,8 +102,10 @@ class QuantMonitor:
             except Exception as e:
                 logger.error(f"实时监控出错: {e}")
             
-            # 等待5秒
-            await asyncio.sleep(MONITOR_INTERVALS["realtime"])
+            # 使用智能刷新间隔
+            refresh_stats = self.smart_refresh.get_refresh_stats()
+            interval = refresh_stats.get("recent_avg_interval", MONITOR_INTERVALS["realtime"])
+            await asyncio.sleep(interval)
     
     async def _monitor_minute(self):
         """分钟级监控（60秒间隔）"""
@@ -338,6 +353,41 @@ class QuantMonitor:
                     }
                     alerts.append(alert)
                     logger.info(f"📉 {symbol} MACD死叉信号")
+        
+        return alerts
+    
+    async def _monitor_system_resources(self):
+        """监控系统资源"""
+        logger.info("启动系统资源监控...")
+        
+        while self.is_monitoring:
+            try:
+                await self.smart_refresh.monitor_system_resources()
+                
+                # 每30秒监控一次系统资源
+                await asyncio.sleep(30)
+                
+            except Exception as e:
+                logger.error(f"系统资源监控出错: {e}")
+                await asyncio.sleep(60)
+    
+    def get_smart_refresh_stats(self) -> Dict:
+        """获取智能刷新统计信息"""
+        return self.smart_refresh.get_refresh_stats()
+    
+    async def check_alerts(self, stock_data: Dict) -> List[Dict]:
+        """检查股票数据告警"""
+        alerts = []
+        try:
+            for symbol, data in stock_data.items():
+                if isinstance(data, dict) and 'price' in data:
+                    # 检查价格异常
+                    current_price = data['price']
+                    # 这里可以添加更复杂的告警逻辑
+                    # 暂时返回空列表，避免影响现有功能
+                    pass
+        except Exception as e:
+            logger.error(f"检查告警出错: {e}")
         
         return alerts
     

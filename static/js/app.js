@@ -359,18 +359,31 @@ class QuantMonitorApp {
             return;
         }
         
+        // 使用默认的股票符号
+        const symbols = [
+            "AAPL", "MSFT", "GOOGL", "AMZN", "TSLA",
+            "NVDA", "META", "BABA", "TSM", "0050.TW"
+        ];
+        
         fetch('/api/start-monitoring', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
-            }
+            },
+            body: JSON.stringify({ symbols: symbols })
         })
         .then(response => response.json())
         .then(data => {
-            if (data.status === 'success') {
+            console.log('启动监控响应:', data);
+            if (data.status === 'started' || data.status === 'success') {
                 this.isMonitoring = true;
                 this.updateStatus('监控已启动', 'monitoring');
-                alert('监控已启动');
+                alert('监控已启动: ' + data.message);
+                
+                // 重新加载系统状态
+                this.loadSystemStatus();
+            } else if (data.status === 'already_running') {
+                alert('监控已在运行中');
             }
         })
         .catch(error => {
