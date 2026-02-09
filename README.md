@@ -36,6 +36,13 @@ quant_monitor/
 ├── data/                # 数据存储
 ├── logs/                # 日志文件
 ├── tests/               # 测试文件
+├── docs/                # 分析文档
+│   ├── README.md       # 文档目录说明
+│   ├── 量化交易系统调研报告.md
+│   ├── 量化交易系统刷新频率分析.md
+│   ├── 量化项目核心特点分析.md
+│   ├── 市场预测策略深度研究.md
+│   └── 实施建议.md
 ├── requirements.txt     # Python依赖
 ├── .env.example         # 环境变量示例
 ├── start.py            # 启动脚本
@@ -161,12 +168,25 @@ MIT License
 
 ## 📋 项目文档
 
+### 核心文档
 - [文档索引.md](文档索引.md) - 所有文档的快速导航索引
 - [项目分析总结.md](项目分析总结.md) - 完整的项目功能分析和开发路线图
+- [项目完成总结.md](项目完成总结.md) - 项目完成状态和任务清单
+
+### 技术文档
 - [前端开发任务.md](前端开发任务.md) - 前端开发状态和优化计划
 - [API_RESEARCH.md](API_RESEARCH.md) - API数据源调研报告
 - [REFRESH_OPTIMIZATION.md](REFRESH_OPTIMIZATION.md) - 刷新频率优化建议
 - [部署完成.md](部署完成.md) - 部署指南和访问信息
+
+### 量化交易分析文档
+- [docs/量化交易系统调研报告.md](docs/量化交易系统调研报告.md) - 综合调研报告
+- [docs/量化交易系统刷新频率分析.md](docs/量化交易系统刷新频率分析.md) - 刷新频率深度分析
+- [docs/量化项目核心特点分析.md](docs/量化项目核心特点分析.md) - 不同规模项目对比
+- [docs/市场预测策略深度研究.md](docs/市场预测策略深度研究.md) - 市场预测方法研究
+- [docs/实施建议.md](docs/实施建议.md) - 具体实施建议和升级路径
+
+**完整文档目录**: 查看 [docs/README.md](docs/README.md)
 
 ## 🤝 贡献
 
