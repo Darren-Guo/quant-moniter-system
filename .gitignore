@@ -59,6 +59,7 @@ data/
 .env
 *.env
 config/secrets.json
+.github_token
 
 # Backups
 *.backup
